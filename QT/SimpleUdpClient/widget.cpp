@@ -125,7 +125,7 @@ void Widget::initClient()
         //从界面上读取ip和端口
         const QString address_text=ui->editPeerAddress->text();
         const QHostAddress address=QHostAddress(address_text);
-        const unsigned short port=ui->editPeerAddress->text().toUShort();
+        const unsigned short port=ui->editPeerPort->text().toUShort();
 
         //combobox：单播 广播 组播
         switch (ui->comboBox->currentIndex()) {
