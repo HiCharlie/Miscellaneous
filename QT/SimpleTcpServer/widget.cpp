@@ -66,6 +66,7 @@ void Widget::initServer()
             //最好在完成处理后显式删除该对象，以避免浪费内存。
             //返回的QTcpSocket对象不能从另一个线程使用，如有需要可重写incomingConnection().
             QTcpSocket *socket=server->nextPendingConnection();
+
             clientList.append(socket);
 
             ui->editRecv->append(QString("[%1:%2] Socket Connected")
