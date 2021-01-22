@@ -8,10 +8,10 @@ void ConnectionTestThread::run()
     qDebug()<<"In Thread run():" << db.connectionName();
 
     QSqlQuery query(db);
-    query.exec("SELECT * FROM user where id=1");
+    query.exec("SELECT * FROM user WHERE id=1");
 
     while (query.next()) {
-        qDebug()<<query.value("name").toString();
+        qDebug()<<query.value("username").toString();
     }
 
     //连接使用完后，释放回数据库连接池

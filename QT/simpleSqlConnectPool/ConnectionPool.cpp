@@ -1,10 +1,29 @@
 #include "ConnectionPool.h"
 #include <QDebug>
+#include <QFileInfo>
+#include <QDir>
 
+//配置文件头文件
+#include <QSettings>
+//#include "system_config.h"
 
 QMutex ConnectionPool::mutex;
 QWaitCondition ConnectionPool::waitConnection;
 ConnectionPool* ConnectionPool::instance = NULL;
+
+bool ConnectionPool::isDirOrFileExits(QString dbName)
+{
+    QFileInfo fileinfo(dbName);
+
+    return  fileinfo.exists();
+}
+
+bool ConnectionPool::createSqlitePath(QString path)
+{
+    QDir parameterDir;
+
+    return  parameterDir.mkpath(path);
+}
 
 void ConnectionPool::release()
 {
@@ -79,12 +98,14 @@ ConnectionPool::~ConnectionPool()
 {
     //销毁连接池的时候删除所有的连接
     foreach(QString connectionName,usedConnectionNames){
-        QSqlDatabase::removeDatabase(connectionName);
+        QSqlDatabase::removeDatabase(connectionName);     //删除代码有问题，应该延时删除
     }
 
     foreach(QString connectionName,unusedConnectionNames){
-        QSqlDatabase::removeDatabase(connectionName);
+        QSqlDatabase::removeDatabase(connectionName);     //删除代码有问题，应该延时删除
     }
+
+    qDebug()<<"ConnectionPool Destruct!";
 }
 
 ConnectionPool &ConnectionPool::getInstance()
@@ -103,19 +124,70 @@ ConnectionPool &ConnectionPool::getInstance()
 ConnectionPool::ConnectionPool()
 {
     //创建数据库连接的这些信息在实际开发的时候都需要通过读取配置文件得到
-    //这里采用写在代码中方式
-    hostName = "127.0.0.1";
-    databaseName = "mytest";
-    userName = "root";
-    password = "";
-    databaseType = "QMYSQL";
-    testOnBorrow = true;
-    testOnBorrowSql = "SELECT 1";
+    QString DirPath = QCoreApplication::applicationDirPath();   //获取程序运行目录
+    qDebug()<<"DirPath:" + DirPath;
+    QString ConfigDirPath = DirPath+"//" + "config";            //配置文件目录,固定写入程序
+    QString ConfigFile = ConfigDirPath + "//" + "conf.ini";
 
-    maxWaitTime = 1000;
-    waitInterval = 200;
-    maxConnectionCount = 5;
+    //判断是否存在目录
+    if(!isDirOrFileExits(ConfigFile))
+    {
+        qDebug()<<"configFile is invalid."<<ConfigDirPath;
 
+        createSqlitePath(ConfigDirPath);
+
+        //这里采用写在代码中方式
+        hostName = "127.0.0.1";
+        databaseName = "mytest";
+        databasePath = "data";
+        userName = "root";
+        password = "";
+        databaseType = "QMYSQL";
+        testOnBorrow = true;
+        testOnBorrowSql = "SELECT 1";
+
+        maxWaitTime = 1000;
+        waitInterval = 200;
+        maxConnectionCount = 5;
+
+        QSettings set1(ConfigFile,QSettings::IniFormat);
+        set1.setIniCodec(QTextCodec::codecForName("utf-8"));
+        set1.beginGroup("SqlSetting");
+
+        set1.setValue("hostName", hostName);            //主机名称
+        set1.setValue("databaseName", databaseName);    //数据库名称或文件名称
+        set1.setValue("databasePath", databasePath);    //数据库路径
+        set1.setValue("userName", userName);            //用户名
+        set1.setValue("password", password);            //密码
+        set1.setValue("databaseType", databaseType);    //数据库类型
+        set1.setValue("testOnBorrow", testOnBorrow);    //测试是否连接
+        set1.setValue("testOnBorrowSql", testOnBorrowSql);  //测试语句
+        set1.setValue("maxWaitTime", maxWaitTime);          //最大等待时间
+        set1.setValue("waitInterval", waitInterval);        //等待间隔
+        set1.setValue("maxConnectionCount", maxConnectionCount);    //最大连接数
+
+        set1.endGroup();
+
+    }
+
+    //从ini文件中读取sql配置
+    QSettings set(ConfigFile,QSettings::IniFormat);
+    set.setIniCodec(QTextCodec::codecForName("utf-8"));
+    set.beginGroup("SqlSetting");
+
+    hostName = set.value("hostName").toString();
+    databaseName = set.value("databaseName").toString();
+    databasePath = set.value("databasePath").toString();
+    userName = set.value("userName").toString();
+    password = set.value("password").toString();
+    databaseType = set.value("databaseType").toString();
+    testOnBorrow = set.value("testOnBorrow").toBool();
+    testOnBorrowSql = set.value("testOnBorrowSql").toString();
+
+    maxWaitTime = set.value("maxWaitTime").toInt();
+    waitInterval = set.value("waitInterval").toInt();
+    maxConnectionCount = set.value("maxConnectionCount").toInt();
+    set.endGroup();
 }
 
 QSqlDatabase ConnectionPool::createConnection(const QString &connectionName)
@@ -146,7 +218,20 @@ QSqlDatabase ConnectionPool::createConnection(const QString &connectionName)
     //创建一个新的连接
     QSqlDatabase db = QSqlDatabase::addDatabase(databaseType,connectionName);
     db.setHostName(hostName);
-    db.setDatabaseName(databaseName);
+
+    if(databaseType == "QSQLITE"){
+        QString dataFilePath = QString(".//%1").arg(databasePath);
+
+        if(!isDirOrFileExits(dataFilePath))
+        {
+            createSqlitePath(dataFilePath);
+        }
+
+        db.setDatabaseName(QString("%1//%2.db").arg(dataFilePath).arg(databaseName));
+    } else {
+        db.setDatabaseName(databaseName);
+    }
+
     db.setUserName(userName);
     db.setPassword(password);
 

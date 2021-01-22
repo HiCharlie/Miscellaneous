@@ -14,7 +14,8 @@ int main(int argc, char *argv[])
         thread->start();
     }
 
-    ConnectionPool::release();
+    QThread::msleep(200);
+    ConnectionPool::release();        //释放掉
 
     return a.exec();
 }

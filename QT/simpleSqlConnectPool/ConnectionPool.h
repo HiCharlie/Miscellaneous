@@ -11,6 +11,9 @@
 class ConnectionPool
 {
 public:
+    static bool isDirOrFileExits(QString dbName);
+    static bool createSqlitePath(QString path);
+
     static void release();                  //关闭所有的数据库连接
     static QSqlDatabase openConnection();   //获取数据库连接
     static void closeConnection(QSqlDatabase connection);   //释放数据库连接返回连接池
@@ -29,6 +32,7 @@ private:
     //数据库信息
     QString hostName;
     QString databaseName;
+    QString databasePath;
     QString userName;
     QString password;
     QString databaseType;
