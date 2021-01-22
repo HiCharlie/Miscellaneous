@@ -105,9 +105,9 @@ ConnectionPool::ConnectionPool()
     //创建数据库连接的这些信息在实际开发的时候都需要通过读取配置文件得到
     //这里采用写在代码中方式
     hostName = "127.0.0.1";
-    databaseName = "qt";
+    databaseName = "mytest";
     userName = "root";
-    password = "zhjica@163";
+    password = "";
     databaseType = "QMYSQL";
     testOnBorrow = true;
     testOnBorrowSql = "SELECT 1";
